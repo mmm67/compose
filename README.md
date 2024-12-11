@@ -1,0 +1,1 @@
+A simple Habit Tracker app built using **Jetpack Compose**, **Room**, and **Hilt** for dependency injection. This app allows users to track their habits, set reminders, and categorize their habits for better management.
