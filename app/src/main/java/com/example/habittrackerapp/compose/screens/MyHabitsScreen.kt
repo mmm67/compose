@@ -41,7 +41,7 @@ fun MyHabitsScreen(
     navController: NavHostController,
     viewModel: AppViewModel,
 ) {
-    val sortedHabits by viewModel.sortedHabits.collectAsStateWithLifecycle()
+    val habitListUiState by viewModel.habitListUiState.collectAsStateWithLifecycle()
     val categoryMap by viewModel.categoryMap.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -67,10 +67,10 @@ fun MyHabitsScreen(
             }
         }) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)){
-            if (sortedHabits.isEmpty()) {
+            if (habitListUiState.habits.isEmpty()) {
                 NoHabitsScreen()
             } else {
-                HabitsListComponents(sortedHabits, categoryMap, viewModel::onEvent)
+                HabitsListComponents(habitListUiState.habits, categoryMap, viewModel::onEvent)
             }
         }
     }

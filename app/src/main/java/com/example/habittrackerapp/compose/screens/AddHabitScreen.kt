@@ -56,7 +56,7 @@ fun YesNoHabitScreen(
 ) {
 
     val categoryState = viewModel.categoryUiState.collectAsStateWithLifecycle()
-    val habitState = viewModel.habitState.collectAsStateWithLifecycle()
+    val habitState = viewModel.habitDetailUiState.collectAsStateWithLifecycle()
     val reminderState = viewModel.reminderState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current

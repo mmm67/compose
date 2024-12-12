@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import com.example.habittrackerapp.compose.NavTopBar
 import com.example.habittrackerapp.viewmodels.AppViewModel
 import com.example.habittrackerapp.compose.Routes

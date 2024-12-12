@@ -9,7 +9,8 @@ import com.example.habittrackerapp.CategoryEvent
 import com.example.habittrackerapp.CategoryState
 import com.example.habittrackerapp.SelectedCategoryState
 import com.example.habittrackerapp.HabitEvent
-import com.example.habittrackerapp.HabitState
+import com.example.habittrackerapp.HabitDetailUiState
+import com.example.habittrackerapp.HabitListState
 import com.example.habittrackerapp.OperationResult
 import com.example.habittrackerapp.ReminderEvent
 import com.example.habittrackerapp.ReminderState
@@ -51,8 +52,11 @@ class AppViewModel @Inject constructor(
     private val _categoryUiState = MutableStateFlow(CategoryState())
     val categoryUiState: StateFlow<CategoryState> = _categoryUiState.asStateFlow()
 
-    private val _habitState = MutableStateFlow(HabitState())
-    val habitState: StateFlow<HabitState> = _habitState.asStateFlow()
+    private val _habitDetailUiState = MutableStateFlow(HabitDetailUiState())
+    val habitDetailUiState: StateFlow<HabitDetailUiState> = _habitDetailUiState.asStateFlow()
+
+    private val _habitListUiState = MutableStateFlow(HabitListState())
+    val habitListUiState: StateFlow<HabitListState> = _habitListUiState.asStateFlow()
 
     private val _reminderState = MutableStateFlow(ReminderState())
     val reminderState: StateFlow<ReminderState> = _reminderState.asStateFlow()
@@ -60,11 +64,7 @@ class AppViewModel @Inject constructor(
     private val _result = MutableSharedFlow<OperationResult>()
     val result: SharedFlow<OperationResult> = _result
 
-    val sortedHabits: StateFlow<List<Habit>> = _habitState
-        .map { habitState -> habitState.habits.sortedBy { it.categoryId } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val sortedTodayHabits: StateFlow<List<Habit>> = _habitState
+    val sortedTodayHabits: StateFlow<List<Habit>> = _habitListUiState
         .map { habitState -> habitState.todayHabits.sortedBy { it.categoryId } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -81,7 +81,7 @@ class AppViewModel @Inject constructor(
     private fun getAllHabits() {
         viewModelScope.launch {
             repository.getAllHabits().collectLatest { habits ->
-                _habitState.update {
+                _habitListUiState.update {
                     it.copy(habits = habits)
                 }
             }
@@ -91,11 +91,11 @@ class AppViewModel @Inject constructor(
     private fun getAllCategories() {
         viewModelScope.launch {
             repository.getAllCategories().collectLatest { categories ->
-                _categoryUiState.value = _categoryUiState.value.copy(
-                    categoryListState = _categoryUiState.value.categoryListState.copy(
-                        categories = categories
+                _categoryUiState.update { state ->
+                    state.copy(
+                        categoryListState = state.categoryListState.copy(categories = categories)
                     )
-                )
+                }
             }
         }
     }
@@ -115,7 +115,7 @@ class AppViewModel @Inject constructor(
             ) { _habitsWithReminders, _dailyHabits ->
                 _habitsWithReminders to _dailyHabits
             }.collectLatest { (habitsWithReminders, dailyHabits) ->
-                _habitState.update {
+                _habitListUiState.update {
                     it.copy(todayHabits = (habitsWithReminders + dailyHabits).distinct())
                 }
             }
@@ -128,38 +128,38 @@ class AppViewModel @Inject constructor(
         when (event) {
             HabitEvent.SaveHabit -> {
                 viewModelScope.launch {
-                    _habitState.update {
+                    _habitDetailUiState.update {
                         it.copy(categoryId = repository.getCategory(_categoryUiState.value.selectedCategory.name))
                     }
 
-                    if (_habitState.value.name.isEmpty() || _habitState.value.categoryId == Constants.INVALID_CATEGORY_ID) {
+                    if (_habitDetailUiState.value.name.isEmpty() || _habitDetailUiState.value.categoryId == Constants.INVALID_CATEGORY_ID) {
                         _result.emit(OperationResult.Error("Fill out mandatory items."))
                         return@launch
                     }
 
                     val habit = Habit(
-                        name = _habitState.value.name,
-                        description = _habitState.value.description,
-                        type = _habitState.value.type,
-                        frequency = _habitState.value.frequency,
-                        isReminderEnabled = _habitState.value.isReminderEnabled,
-                        categoryId = _habitState.value.categoryId,
-                        hitCount = _habitState.value.hitCount,
-                        doneTime = _habitState.value.doneTime,
-                        targetValue = _habitState.value.targetValue,
-                        hitCountUpdated = _habitState.value.hitCountUpdatedTime
+                        name = _habitDetailUiState.value.name,
+                        description = _habitDetailUiState.value.description,
+                        type = _habitDetailUiState.value.type,
+                        frequency = _habitDetailUiState.value.frequency,
+                        isReminderEnabled = _habitDetailUiState.value.isReminderEnabled,
+                        categoryId = _habitDetailUiState.value.categoryId,
+                        hitCount = _habitDetailUiState.value.hitCount,
+                        doneTime = _habitDetailUiState.value.doneTime,
+                        targetValue = _habitDetailUiState.value.targetValue,
+                        hitCountUpdated = _habitDetailUiState.value.hitCountUpdatedTime
                     )
 
-                    if (_habitState.value.isReminderEnabled) {
-                        if (_habitState.value.frequency == Constants.HabitFrequency.DAILY && _reminderState.value.time == "Select Time") {
+                    if (_habitDetailUiState.value.isReminderEnabled) {
+                        if (_habitDetailUiState.value.frequency == Constants.HabitFrequency.DAILY && _reminderState.value.time == "Select Time") {
                             _result.emit(OperationResult.Error("Fill out Time."))
                             return@launch
                         }
-                        if (_habitState.value.frequency == Constants.HabitFrequency.MONTHLY && _reminderState.value.date == "Select Date") {
+                        if (_habitDetailUiState.value.frequency == Constants.HabitFrequency.MONTHLY && _reminderState.value.date == "Select Date") {
                             _result.emit(OperationResult.Error("Fill out Date."))
                             return@launch
                         }
-                        if (_habitState.value.frequency == Constants.HabitFrequency.WEEKLY && _reminderState.value.day == "Day") {
+                        if (_habitDetailUiState.value.frequency == Constants.HabitFrequency.WEEKLY && _reminderState.value.day == "Day") {
                             _result.emit(OperationResult.Error("Fill out Day."))
                             return@launch
                         }
@@ -172,8 +172,8 @@ class AppViewModel @Inject constructor(
                         )
                         repository.addHabit(habit = habit, reminder)
                         scheduleReminder(
-                            _habitState.value.id,
-                            _habitState.value.name,
+                            _habitDetailUiState.value.id,
+                            _habitDetailUiState.value.name,
                             _reminderState.value.message
                         )
 
@@ -182,48 +182,48 @@ class AppViewModel @Inject constructor(
                     }
 
                     _result.emit(OperationResult.Success)
-                    _habitState.value = HabitState()
+                    _habitDetailUiState.value = HabitDetailUiState()
                 }
             }
 
             is HabitEvent.SetDescription -> {
-                _habitState.update {
+                _habitDetailUiState.update {
                     it.copy(description = event.description)
                 }
             }
 
             is HabitEvent.SetFrequency -> {
-                _habitState.update {
+                _habitDetailUiState.update {
                     it.copy(frequency = event.frequency)
                 }
             }
 
             is HabitEvent.SetId -> {
-                _habitState.update {
+                _habitDetailUiState.update {
                     it.copy(id = event.id)
                 }
             }
 
             is HabitEvent.SetName -> {
-                _habitState.update {
+                _habitDetailUiState.update {
                     it.copy(name = event.name)
                 }
             }
 
             is HabitEvent.SetReminderEnabled -> {
-                _habitState.update {
+                _habitDetailUiState.update {
                     it.copy(isReminderEnabled = event.enabled)
                 }
             }
 
             is HabitEvent.SetTargetValue -> {
-                _habitState.update {
+                _habitDetailUiState.update {
                     it.copy(targetValue = event.targetValue)
                 }
             }
 
             is HabitEvent.SetType -> {
-                _habitState.update {
+                _habitDetailUiState.update {
                     it.copy(type = event.type)
                 }
             }
@@ -245,7 +245,7 @@ class AppViewModel @Inject constructor(
             }
 
             HabitEvent.ResetSelectedHabit -> {
-                _habitState.value = HabitState()
+                _habitDetailUiState.value = HabitDetailUiState()
             }
         }
     }
@@ -401,7 +401,7 @@ class AppViewModel @Inject constructor(
 
             var calendar = Calendar.getInstance()
 
-            when (habitState.value.frequency) {
+            when (habitDetailUiState.value.frequency) {
                 Constants.HabitFrequency.DAILY -> {
                     calendar.set(Calendar.HOUR_OF_DAY, hour)
                     calendar.set(Calendar.MINUTE, minute)
